@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>请输入密文</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding-top: 50px; }
+    #inputBox { font-size: 16px; padding: 8px; width: 300px; }
+    #btn { font-size: 16px; padding: 8px 16px; margin-left: 8px; cursor: pointer; }
+    /* #message 容器将为内部的 .info-box 提供默认颜色 */
+    #message { margin-top: 20px; font-size: 16px; color: #007BFF; white-space: pre-wrap; text-align: center; /*居中info-box*/ }
+    .info-box {
+      background-color: #f0f0f0;
+      border: 1px solid #ccc;
+      padding: 15px; /* 增加内边距 */
+      margin-top:15px;
+      border-radius: 5px;
+      font-weight: bold; /* 加粗所有info-box内容 */
+      display: inline-block; /* 使其内容决定宽度，并可以居中 */
+      text-align: left; /* info-box内部文本左对齐 */
+      word-break: break-all; /* 长数字串自动换行 */
+    }
+  </style>
+  </head>
+<body>
+  <h1>请输入密文</h1>
+  <input id="inputBox" placeholder="在此输入任意文本" />
+  <button id="btn">提交处理</button>
+  <div id="message"></div>
+
+  <script>
+    // Parameters for small RSA (p=61, q=53)
+    const n_small = 3233; // p * q = 61 * 53
+    const e_small = 17;   // Chosen public exponent, gcd(17, (61-1)*(53-1)=3120) = 1
+    const FIXED_NUMERIC_WIDTH = 7; // 每个字符代表的数字固定为7位宽，不足补0 (足以容纳所有Unicode码点)
+
+    // Function for modular exponentiation: (base^exp) % mod
+    function power(base, exp, mod) {
+      let res = 1n;
+      base = BigInt(base) % BigInt(mod);
+      exp = BigInt(exp);
+      mod = BigInt(mod);
+
+      while (exp > 0n) {
+        if (exp % 2n === 1n) res = (res * base) % mod;
+        base = (base * base) % mod;
+        exp = exp / 2n;
+      }
+      return res.toString();
+    }
+
+    // Function to pad numbers with leading zeros to a specific length
+    function padNumber(numStr, length) {
+      return numStr.padStart(length, '0');
+    }
+
+    document.getElementById('btn').onclick = function() {
+      const v = document.getElementById('inputBox').value;
+      const msgEl = document.getElementById('message');
+      msgEl.innerHTML = ''; // Clear previous message
+
+      if (!v.trim()) {
+        // 使用 info-box 样式以保持一致性
+        msgEl.innerHTML = '<div class="info-box" style="color: red;">请输入内容后再提交</div>';
+        return;
+      }
+
+      const trimmedV = v.trim();
+
+      // Conditional output for specific phrases (case-insensitive)
+      if (trimmedV.toLowerCase() === "i love my country") {
+        // 使用 info-box 样式，颜色将从 #message 继承 (#007BFF)
+        msgEl.innerHTML = '<div class="info-box">清澈的爱只为中国</div>';
+        return;
+      }
+
+      // --- String Processing with Small RSA (n=3233, e=17) ---
+      let finalNumericParts = [];
+
+      for (let i = 0; i < trimmedV.length; i++) {
+        const char = trimmedV[i];
+        const charCode = char.charCodeAt(0);
+        let numericRepresentation;
+
+        if (charCode < n_small) { // 小于n的Unicode值，进行RSA加密
+          const encryptedChar = power(charCode, e_small, n_small);
+          numericRepresentation = padNumber(encryptedChar, FIXED_NUMERIC_WIDTH);
+        } else { // 大于等于n的Unicode值，直接使用其数值
+          numericRepresentation = padNumber(charCode.toString(), FIXED_NUMERIC_WIDTH);
+        }
+        finalNumericParts.push(numericRepresentation);
+      }
+
+      const finalNumericString = finalNumericParts.join(''); // 直接拼接，无分隔符
+      
+      // 使用 info-box 样式，颜色将从 #message 继承 (#007BFF)
+      msgEl.innerHTML = `<div class="info-box">${finalNumericString}</div>`;
+
+    };
+
+    window.onload = () => {
+      document.getElementById('inputBox').focus();
+    };
+  </script>
+</body>
+</html>
